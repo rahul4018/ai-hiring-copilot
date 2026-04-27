@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, date
+from datetime import datetime
 
 from sqlalchemy import (
     Column,
@@ -31,17 +31,33 @@ class Job(Base):
         primary_key=True,
         default=uuid.uuid4
     )
+
     title = Column(String(255), nullable=False)
     company = Column(String(255), nullable=False)
     raw_jd = Column(Text, nullable=False)
     extracted_skills = Column(JSONB, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    scores = relationship("Score", back_populates="job")
-    applications = relationship("Application", back_populates="job")
+    # Cascade delete scores when job is deleted
+    scores = relationship(
+        "Score",
+        back_populates="job",
+        cascade="all, delete-orphan"
+    )
+
+    # Cascade delete applications when job is deleted
+    applications = relationship(
+        "Application",
+        back_populates="job",
+        cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
-        return f"<Job(title={self.title}, company={self.company})>"
+        return (
+            f"<Job(id={self.id}, "
+            f"title={self.title}, "
+            f"company={self.company})>"
+        )
 
 
 # ---------------------------------------------------
@@ -56,11 +72,17 @@ class Resume(Base):
         primary_key=True,
         default=uuid.uuid4
     )
+
     raw_text = Column(Text, nullable=False)
     skills = Column(JSONB, nullable=True)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
 
-    scores = relationship("Score", back_populates="resume")
+    # Cascade delete scores when resume is deleted
+    scores = relationship(
+        "Score",
+        back_populates="resume",
+        cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Resume(id={self.id})>"
@@ -81,13 +103,13 @@ class Score(Base):
 
     job_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("jobs.id"),
+        ForeignKey("jobs.id", ondelete="CASCADE"),
         nullable=False
     )
 
     resume_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("resumes.id"),
+        ForeignKey("resumes.id", ondelete="CASCADE"),
         nullable=False
     )
 
@@ -96,11 +118,21 @@ class Score(Base):
     prep_plan = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    job = relationship("Job", back_populates="scores")
-    resume = relationship("Resume", back_populates="scores")
+    job = relationship(
+        "Job",
+        back_populates="scores"
+    )
+
+    resume = relationship(
+        "Resume",
+        back_populates="scores"
+    )
 
     def __repr__(self):
-        return f"<Score(match_percent={self.match_percent})>"
+        return (
+            f"<Score(id={self.id}, "
+            f"match_percent={self.match_percent})>"
+        )
 
 
 # ---------------------------------------------------
@@ -118,7 +150,7 @@ class Application(Base):
 
     job_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("jobs.id"),
+        ForeignKey("jobs.id", ondelete="CASCADE"),
         nullable=False
     )
 
@@ -128,10 +160,16 @@ class Application(Base):
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    job = relationship("Job", back_populates="applications")
+    job = relationship(
+        "Job",
+        back_populates="applications"
+    )
 
     def __repr__(self):
-        return f"<Application(status={self.status})>"
+        return (
+            f"<Application(id={self.id}, "
+            f"status={self.status})>"
+        )
 
 
 # ---------------------------------------------------
@@ -152,7 +190,11 @@ class SkillGap(Base):
     in_resume = Column(Boolean, default=False)
 
     def __repr__(self):
-        return f"<SkillGap(skill={self.skill}, frequency={self.frequency})>"
+        return (
+            f"<SkillGap(skill={self.skill}, "
+            f"frequency={self.frequency}, "
+            f"in_resume={self.in_resume})>"
+        )
 
 
 # ---------------------------------------------------
@@ -160,7 +202,7 @@ class SkillGap(Base):
 # ---------------------------------------------------
 def create_tables():
     """
-    Create all database tables
+    Create all database tables.
     """
     Base.metadata.create_all(bind=engine)
 
