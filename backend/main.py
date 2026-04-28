@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from backend.database import engine
+from backend.models import Base
 from backend.routers import (
     jobs,
     resume,
@@ -36,7 +37,7 @@ app = FastAPI(
 # ----------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # lock this down in production
+    allow_origins=["*"],   # restrict later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,17 +50,23 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """
-    Verify database connection on app startup.
+    Verify DB connection + auto create tables
     """
     try:
+        # Check DB connection
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
 
         print("Database connection successful")
+
+        # AUTO CREATE TABLES
+        Base.metadata.create_all(bind=engine)
+        print("Database tables created successfully")
+
         print("AI Hiring Copilot API started successfully")
 
     except Exception as e:
-        print(f"Database connection failed: {str(e)}")
+        print(f"Database startup failed: {str(e)}")
 
 
 # ----------------------------
@@ -67,13 +74,10 @@ async def startup_event():
 # ----------------------------
 @app.get("/")
 async def root():
-    """
-    Root API endpoint.
-    """
     return {
         "message": "AI Hiring Copilot API is running",
-        "docs": "http://127.0.0.1:8000/docs",
-        "health_check": "http://127.0.0.1:8000/health"
+        "docs": "/docs",
+        "health_check": "/health"
     }
 
 
@@ -82,9 +86,6 @@ async def root():
 # ----------------------------
 @app.get("/health")
 async def health():
-    """
-    Basic health check endpoint.
-    """
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
@@ -133,9 +134,6 @@ async def global_exception_handler(
     request: Request,
     exc: Exception
 ):
-    """
-    Catch unexpected server errors.
-    """
     return JSONResponse(
         status_code=500,
         content={
