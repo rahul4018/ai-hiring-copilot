@@ -1,52 +1,83 @@
 import re
 import string
-from typing import List, Dict
+from typing import List, Dict, Set
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
+# ----------------------------------------
+# Skill Alias Mapping
+# ----------------------------------------
+SKILL_ALIASES = {
+    "machine learning": ["ml", "ml models"],
+    "artificial intelligence": ["ai"],
+    "nlp": ["natural language processing"],
+    "aws": ["amazon web services", "sagemaker"],
+    "fastapi": ["rest api", "api development", "backend api"],
+    "postgresql": ["postgres", "postgres db"],
+    "pytorch": ["torch"],
+    "docker": ["containerization"],
+    "javascript": ["js"],
+    "typescript": ["ts"]
+}
+
+
+# ----------------------------------------
+# Text Cleaning
+# ----------------------------------------
 def preprocess_text(text: str) -> str:
     """
-    Clean text before TF-IDF processing.
-
-    Steps:
-    - lowercase
-    - remove punctuation
-    - remove numbers
-    - remove extra spaces
+    Clean text before TF-IDF processing
     """
     if not text or not text.strip():
         return ""
 
     text = text.lower()
 
-    # Remove numbers
+    # remove numbers
     text = re.sub(r"\d+", "", text)
 
-    # Remove punctuation
-    text = text.translate(str.maketrans("", "", string.punctuation))
+    # remove punctuation
+    text = text.translate(
+        str.maketrans("", "", string.punctuation)
+    )
 
-    # Remove extra spaces
+    # remove extra spaces
     text = re.sub(r"\s+", " ", text).strip()
 
     return text
 
 
+# ----------------------------------------
+# Expand Skill Aliases
+# ----------------------------------------
+def expand_skill_set(skills: List[str]) -> Set[str]:
+    expanded = set()
+
+    for skill in skills:
+        skill = skill.lower().strip()
+        expanded.add(skill)
+
+        # expand aliases
+        for main_skill, aliases in SKILL_ALIASES.items():
+
+            if skill == main_skill:
+                expanded.update(aliases)
+
+            elif skill in aliases:
+                expanded.add(main_skill)
+                expanded.update(aliases)
+
+    return expanded
+
+
+# ----------------------------------------
+# TF-IDF Resume Score
+# ----------------------------------------
 def score_resume(jd_text: str, resume_text: str) -> float:
     """
-    Score resume against job description using TF-IDF cosine similarity.
-
-    Why TF-IDF?
-    - Lightweight
-    - Fast
-    - No external API cost
-    - Works well for keyword-heavy resumes/JDs
-
-    Cosine similarity measures:
-    - How similar two text vectors are
-    - Value between 0 and 1
-    - Converted here to percentage (0-100)
+    Calculate semantic similarity using TF-IDF
     """
     if not jd_text.strip() or not resume_text.strip():
         return 0.0
@@ -67,6 +98,9 @@ def score_resume(jd_text: str, resume_text: str) -> float:
     return round(similarity * 100, 2)
 
 
+# ----------------------------------------
+# Match Details
+# ----------------------------------------
 def compute_match_details(
     jd_text: str,
     resume_text: str,
@@ -74,38 +108,77 @@ def compute_match_details(
     resume_skills: List[str]
 ) -> Dict:
     """
-    Return detailed match breakdown.
+    Returns:
+    - overall similarity score
+    - matched skills
+    - missing skills
     """
+
     match_score = score_resume(jd_text, resume_text)
 
-    jd_skill_set = set(skill.lower() for skill in jd_skills)
-    resume_skill_set = set(skill.lower() for skill in resume_skills)
+    expanded_jd_skills = expand_skill_set(jd_skills)
+    expanded_resume_skills = expand_skill_set(resume_skills)
 
-    matched_skills = sorted(list(jd_skill_set.intersection(resume_skill_set)))
-    missing_skills = sorted(list(jd_skill_set - resume_skill_set))
+    matched_skills = []
+    missing_skills = []
+
+    for skill in jd_skills:
+        skill_lower = skill.lower()
+
+        matched = False
+
+        if skill_lower in expanded_resume_skills:
+            matched = True
+
+        else:
+            aliases = SKILL_ALIASES.get(skill_lower, [])
+
+            for alias in aliases:
+                if alias in expanded_resume_skills:
+                    matched = True
+                    break
+
+        if matched:
+            matched_skills.append(skill)
+
+        else:
+            missing_skills.append(skill)
 
     return {
-        "match_percent": round(match_score, 2),
-        "matched_skills": matched_skills,
-        "missing_skills": missing_skills,
-        "total_jd_skills": len(jd_skill_set)
+        "match_percent": match_score,
+        "match_label": interpret_score(match_score),
+        "matched_skills": sorted(list(set(matched_skills))),
+        "missing_skills": sorted(list(set(missing_skills))),
+        "total_jd_skills": len(jd_skills),
+        "matched_count": len(set(matched_skills)),
+        "missing_count": len(set(missing_skills))
     }
 
 
+# ----------------------------------------
+# Human-readable Score Labels
+# ----------------------------------------
 def interpret_score(score: float) -> str:
-    """
-    Convert raw score into human-readable label.
-    """
-    if score >= 75:
-        return "Strong match (75-100)"
+    if score >= 80:
+        return "Excellent Match"
+
+    elif score >= 65:
+        return "Strong Match"
 
     elif score >= 50:
-        return "Partial match (50-74)"
+        return "Moderate Match"
 
-    return "Weak match (below 50)"
+    elif score >= 30:
+        return "Weak Match"
+
+    return "Poor Match"
 
 
+# ----------------------------------------
+# Test
+# ----------------------------------------
 if __name__ == "__main__":
+
     sample_jd = """
     Looking for a Python backend engineer with experience in FastAPI,
     PostgreSQL, Docker, AWS, REST APIs, machine learning,
@@ -115,7 +188,8 @@ if __name__ == "__main__":
     sample_resume = """
     Software engineer with strong Python experience.
     Built APIs using FastAPI and Flask.
-    Worked with PostgreSQL, Docker, Git, and pandas.
+    Worked with Postgres, Docker, Git,
+    pandas, ML models, and AWS SageMaker.
     """
 
     jd_skills = [
@@ -133,22 +207,21 @@ if __name__ == "__main__":
     resume_skills = [
         "python",
         "fastapi",
-        "postgresql",
+        "postgres",
         "docker",
         "git",
-        "pandas"
+        "pandas",
+        "ml",
+        "sagemaker"
     ]
 
-    score = score_resume(sample_jd, sample_resume)
-
-    details = compute_match_details(
+    result = compute_match_details(
         sample_jd,
         sample_resume,
         jd_skills,
         resume_skills
     )
 
-    print("Resume Score:", score)
-    print("Score Interpretation:", interpret_score(score))
-    print("\nMatch Details:")
-    print(details)
+    print("\nResume Match Results")
+    print("----------------------")
+    print(result)
