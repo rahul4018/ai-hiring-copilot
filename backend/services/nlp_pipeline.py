@@ -3,14 +3,14 @@ import spacy
 from typing import List, Set
 
 # -----------------------------------------
-# Load lightweight spaCy model for Render
+# Load spaCy model with Render-safe fallback
 # -----------------------------------------
 try:
     nlp = spacy.load("en_core_web_sm")
+    print("Loaded en_core_web_sm successfully")
 except Exception:
-    nlp = None
-    print("spaCy model not found. Install using:")
-    print("python -m spacy download en_core_web_sm")
+    print("spaCy model not found. Falling back to blank English model.")
+    nlp = spacy.blank("en")
 
 
 # -----------------------------------------
@@ -110,9 +110,9 @@ def extract_skills_from_text(text: str) -> List[str]:
     text = normalize_text(text)
     found_skills: Set[str] = set()
 
-    # -----------------------------
+    # ---------------------------------
     # Direct keyword matching
-    # -----------------------------
+    # ---------------------------------
     for skill in SKILLS_TAXONOMY:
         if " " in skill:
             if skill in text:
@@ -122,25 +122,34 @@ def extract_skills_from_text(text: str) -> List[str]:
             if re.search(pattern, text):
                 found_skills.add(skill)
 
-    # -----------------------------
-    # spaCy matching (only if model loaded)
-    # -----------------------------
-    if nlp:
+    # ---------------------------------
+    # spaCy processing (safe fallback)
+    # ---------------------------------
+    try:
         doc = nlp(text)
 
-        for chunk in doc.noun_chunks:
-            chunk_text = chunk.text.lower().strip()
-            if chunk_text in SKILLS_TAXONOMY:
-                found_skills.add(chunk_text)
+        # noun_chunks only works if parser exists
+        if "parser" in nlp.pipe_names:
+            for chunk in doc.noun_chunks:
+                chunk_text = chunk.text.lower().strip()
 
-        for ent in doc.ents:
-            ent_text = ent.text.lower().strip()
-            if ent_text in SKILLS_TAXONOMY:
-                found_skills.add(ent_text)
+                if chunk_text in SKILLS_TAXONOMY:
+                    found_skills.add(chunk_text)
 
-    # -----------------------------
-    # Regex patterns
-    # -----------------------------
+        # entities only works if ner exists
+        if "ner" in nlp.pipe_names:
+            for ent in doc.ents:
+                ent_text = ent.text.lower().strip()
+
+                if ent_text in SKILLS_TAXONOMY:
+                    found_skills.add(ent_text)
+
+    except Exception:
+        pass
+
+    # ---------------------------------
+    # Regex pattern extraction
+    # ---------------------------------
     regex_patterns = [
         r"experience with ([a-zA-Z0-9\+\#\.\- ]+)",
         r"proficient in ([a-zA-Z0-9\+\#\.\- ]+)",
@@ -180,7 +189,7 @@ def get_missing_skills(
 
 
 # -----------------------------------------
-# Test
+# Local test
 # -----------------------------------------
 if __name__ == "__main__":
     sample_jd = """
@@ -189,4 +198,4 @@ if __name__ == "__main__":
     """
 
     skills = extract_skills_from_text(sample_jd)
-    print("Extracted Skills:", skills)  
+    print("Extracted Skills:", skills)
