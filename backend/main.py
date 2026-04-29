@@ -5,15 +5,7 @@ from sqlalchemy import text
 
 # Database
 from backend.database import engine
-from backend.models import Base
-
-# IMPORTANT:
-# Explicitly import models so SQLAlchemy registers tables
-from backend.models.job import Job
-from backend.models.application import Application
-
-# Add this if you have resume model
-# from backend.models.resume import Resume
+from backend.models import Base, Job, Application, Resume, Score
 
 # Routers
 from backend.routers import (
@@ -47,12 +39,11 @@ app = FastAPI(
 # ----------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten later for production
+    allow_origins=["*"],   # tighten later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # ----------------------------------------
 # Startup Event
@@ -61,8 +52,8 @@ app.add_middleware(
 async def startup_event():
     """
     Runs when app starts:
-    1. Tests DB connection
-    2. Creates missing tables automatically
+    1. Checks DB connection
+    2. Creates tables automatically
     """
     try:
         print("Checking database connection...")
@@ -72,7 +63,7 @@ async def startup_event():
 
         print("Database connection successful")
 
-        # Create all tables automatically
+        # Create all tables
         Base.metadata.create_all(bind=engine)
 
         print("Database tables created successfully")
@@ -80,6 +71,7 @@ async def startup_event():
 
     except Exception as e:
         print(f"Startup failed: {str(e)}")
+        raise e
 
 
 # ----------------------------------------
@@ -89,8 +81,8 @@ async def startup_event():
 async def root():
     return {
         "message": "AI Hiring Copilot API is running",
-        "docs": "https://ai-hiring-copilot-qj5t.onrender.com/docs",
-        "health_check": "https://ai-hiring-copilot-qj5t.onrender.com/health"
+        "docs": "/docs",
+        "health_check": "/health"
     }
 
 
@@ -117,7 +109,7 @@ async def health():
 
 
 # ----------------------------------------
-# Register API Routers
+# Register Routers
 # ----------------------------------------
 app.include_router(
     jobs.router,
@@ -154,4 +146,18 @@ async def global_exception_handler(
             "error": "Internal server error",
             "message": str(exc)
         }
+    )
+
+
+# ----------------------------------------
+# Local Run
+# ----------------------------------------
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "backend.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True
     )
