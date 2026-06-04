@@ -1,230 +1,183 @@
-# [LIVE DEMO](https://your-app.streamlit.app)
-
-> Replace the link above after deploying your Streamlit app.
-
----
-
 # AI Hiring Copilot
 
-I built AI Hiring Copilot because job applications are painfully inefficient. I was manually reading job descriptions, comparing them against my resume, figuring out missing skills, preparing for interviews, and tracking applications in spreadsheets. It was repetitive and slow. I built this platform to automate that workflow using NLP, machine learning, and LLMs so a candidate can upload a resume, paste a job description, instantly see their match score, identify skill gaps, generate a personalized prep plan, and track applications in one dashboard.
+> AI-powered job application assistant — resume scoring, skill gap analysis, LLM interview prep, and application tracking in one self-hostable platform.
+
+**[Live Demo](https://your-app.streamlit.app)** · [Report a Bug](https://github.com/rahul4018/ai-hiring-copilot/issues) · [API Docs](http://localhost:8000/docs)
 
 ---
 
-# Dashboard Screenshot
+## Why I built this
 
-![Dashboard Screenshot](./docs/dashboard-placeholder.png)
+Job applications are repetitive and slow. I was manually reading job descriptions, comparing them against my resume, figuring out missing skills, preparing for interviews, and tracking everything in spreadsheets.
 
-> Replace this image with actual screenshots after deployment.
+I built this to automate that workflow — paste a JD, upload your resume, get a match score, see your gaps, generate a prep plan, and track everything in one dashboard.
 
 ---
 
-# Architecture
+## Features
 
-```bash
-                        +------------------+
-                        |      User        |
-                        +--------+---------+
-                                 |
-                                 v
-                    +--------------------------+
-                    |   Streamlit Frontend     |
-                    | Resume Upload + Dashboard|
-                    +------------+-------------+
-                                 |
-                                 v
-                    +--------------------------+
-                    |      FastAPI Backend     |
-                    |   REST API + Business    |
-                    |         Logic            |
-                    +------------+-------------+
-                                 |
-        ---------------------------------------------------------
-        |                     |                 |                |
-        v                     v                 v                v
+**Job description analysis**
+Extracts 60+ technical skills from raw JD text using spaCy NLP + regex matching. ~85% extraction accuracy across 50+ tested descriptions.
 
-+---------------+   +----------------+   +----------------+   +----------------+
-| PostgreSQL DB |   | spaCy NLP      |   | TF-IDF Scorer  |   | Ollama / Groq |
-| Job Storage   |   | Skill Extraction|  | Resume Match   |   | Prep Plans     |
-+---------------+   +----------------+   +----------------+   +----------------+
+**Resume match scoring**
+TF-IDF cosine similarity scores your resume against a JD from 0–100, with a breakdown of matched vs. missing skills.
+
+**AI interview prep**
+Generates a personalised 7-day prep plan with free learning resources and hands-on tasks — powered by Ollama locally or Groq as a cloud fallback.
+
+**Application tracker**
+Track applied, interview, offer, and follow-up stages across all your applications.
+
+**Analytics dashboard**
+Top missing skills, match score trends, resume performance insights, and application funnel — all in one view.
+
+---
+
+## Architecture
+
+```
+                          User
+                            │
+                            ▼
+               ┌────────────────────────┐
+               │    Streamlit Frontend   │
+               │  Resume upload · UI    │
+               └────────────┬───────────┘
+                            │
+                            ▼
+               ┌────────────────────────┐
+               │    FastAPI Backend     │
+               │  REST API · Business   │
+               │  logic · Auth          │
+               └────────────┬───────────┘
+                            │
+          ┌─────────────────┼──────────────────┐
+          ▼                 ▼                  ▼                  ▼
+  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+  │  PostgreSQL  │  │  spaCy NLP   │  │  TF-IDF      │  │  Ollama /    │
+  │  (storage)   │  │  (skills)    │  │  (scoring)   │  │  Groq (LLM)  │
+  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘
 ```
 
 ---
 
-# Key Features
+## Tech Stack
 
-### 1. Job Description Skill Extraction
-Extracts technical skills from job descriptions using :contentReference[oaicite:0]{index=0} + regex matching.
-
-- Supports 60+ predefined technical skills
-- ~85% extraction accuracy on tested job descriptions
-
----
-
-### 2. Resume Match Scoring
-Scores resumes using TF-IDF cosine similarity via :contentReference[oaicite:1]{index=1}.
-
-- Returns score from 0–100
-- Identifies matched + missing skills
+| Tool | Purpose | Why |
+|---|---|---|
+| FastAPI | Backend API | Async, fast, auto-generates `/docs` |
+| PostgreSQL | Storage | Reliable relational DB for job + resume data |
+| Streamlit | Frontend | Rapid dashboard development without React overhead |
+| spaCy | Skill extraction | Lightweight NLP, runs locally |
+| scikit-learn TF-IDF | Resume scoring | Interpretable, no GPU needed |
+| Ollama | Local LLM | Free inference, no API key, good for dev |
+| Groq | Cloud LLM fallback | Required for free-tier cloud deployment |
 
 ---
 
-### 3. AI Interview Prep Plans
-Generates personalized prep plans using:
+## Quickstart
 
-- Local :contentReference[oaicite:2]{index=2} + :contentReference[oaicite:3]{index=3} (local development)
-- :contentReference[oaicite:4]{index=4} fallback for deployment
-
-Creates:
-
-- 7-day learning plan
-- free learning resources
-- hands-on tasks
-
----
-
-### 4. Application Tracking Dashboard
-Tracks:
-
-- Applied jobs
-- Interviews
-- Offers
-- Follow-ups
-
-Built using :contentReference[oaicite:5]{index=5} + :contentReference[oaicite:6]{index=6}.
-
----
-
-### 5. Analytics Dashboard
-
-Tracks:
-
-- top missing skills
-- match trends
-- application funnel
-- resume performance insights
-
----
-
-# Tech Stack
-
-| Tool | Purpose | Why I Chose It |
-|--------|----------|----------------|
-| :contentReference[oaicite:7]{index=7} | Backend APIs | Fast async APIs + automatic docs |
-| :contentReference[oaicite:8]{index=8} | Database | Reliable relational storage |
-| :contentReference[oaicite:9]{index=9} | Frontend | Fast dashboard development |
-| :contentReference[oaicite:10]{index=10} | NLP | Lightweight skill extraction |
-| :contentReference[oaicite:11]{index=11} | Resume scoring | Simple interpretable ML |
-| :contentReference[oaicite:12]{index=12} | Local LLM | Free local experimentation |
-| :contentReference[oaicite:13]{index=13} | Cloud LLM fallback | Required for deployment |
-
----
-
-# Local Setup (Exactly 6 Commands)
+**6 commands to run locally:**
 
 ```bash
 git clone https://github.com/rahul4018/ai-hiring-copilot.git
 cd ai-hiring-copilot
-py -3.11 -m venv venv
-source venv/Scripts/activate
+python -m venv venv
+source venv/bin/activate          # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 streamlit run frontend/app.py
 ```
 
-Run backend separately:
+In a second terminal, start the API:
 
 ```bash
 uvicorn backend.main:app --reload
 ```
 
+Open `http://localhost:8501` — API docs at `http://localhost:8000/docs`.
+
+> **Ollama setup (optional):** Install [Ollama](https://ollama.ai) and run `ollama pull mistral` for local LLM inference. Without it, the app uses Groq — add a `GROQ_API_KEY` to your `.env`.
+
 ---
 
-# API Documentation
+## API Reference
 
-### Scan Job Description
+### Scan a job description
 
-```bash
+```
 POST /api/v1/jobs/scan
 ```
 
-Input:
+```json
+{
+  "job_title": "Backend Engineer",
+  "company": "Acme Corp",
+  "description": "We are looking for..."
+}
+```
 
-- job title
-- company
-- job description text
-
-Output:
-
-- extracted skills
-- job ID
+Returns extracted skills and a `job_id` for subsequent scoring.
 
 ---
 
-### Score Resume
+### Score a resume
 
-```bash
+```
 POST /api/v1/resume/score/{job_id}/{resume_id}
 ```
 
-Output:
-
-- match %
-- missing skills
-- prep plan
+```json
+{
+  "match_score": 74,
+  "matched_skills": ["Python", "FastAPI", "PostgreSQL"],
+  "missing_skills": ["Kubernetes", "Redis"],
+  "prep_plan": "..."
+}
+```
 
 ---
 
-### Application Insights
+### Skill gap insights
 
-```bash
+```
 GET /api/v1/insights/skill-gaps
 ```
 
-Output:
-
-- top missing skills
-- frequency trends
+Returns top missing skills and frequency trends across all your tracked applications.
 
 ---
 
-# Benchmarks
+## Benchmarks
 
 | Metric | Result |
-|---------|----------|
-| Skill extraction accuracy | ~85% |
+|---|---|
+| Skill extraction accuracy | ~85% on 50+ tested JDs |
 | Average API response time | 1.4s |
-| Resume scoring latency | <500ms |
-| Tested job descriptions | 50+ |
-| Pytest coverage | 11 passing tests |
+| Resume scoring latency | < 500ms |
+| Test suite | 11 passing pytest tests |
 
 ---
 
-# What I Learned
+## What I actually learned building this
 
-Building NLP systems sounds easier than it is. My first version of skill extraction completely failed on obvious job descriptions because I relied too heavily on spaCy noun chunks. It missed explicit skill mentions like Python, AWS, and TensorFlow. I fixed this by adding direct keyword matching and regex fallback logic.
+**spaCy noun chunks alone don't work for skill extraction.** My first version missed obvious mentions like `Python`, `AWS`, and `TensorFlow` because they appear as standalone tokens, not noun phrases. Fixed by adding direct keyword matching and regex fallback on top of the NLP layer.
 
-Managing local AI infrastructure was more annoying than expected. :contentReference[oaicite:14]{index=14} worked great locally, but it became useless for free cloud deployment because you can’t run local models on free hosting platforms. I had to redesign the architecture to support :contentReference[oaicite:15]{index=15} as a deployment fallback.
+**Local LLMs don't survive free cloud deployment.** Ollama works great locally but can't run on free hosting platforms — there's no way to spin up a local model process. Redesigned the architecture to treat Ollama as a dev-only path and Groq as the deployment path, switchable via environment variable.
 
-Testing exposed problems I would’ve missed manually. My PostgreSQL test database permissions broke API tests, and I had to debug schema permissions before all tests passed. That forced me to treat deployment and testing as actual engineering work—not an afterthought.
-
----
-
-# Roadmap
-
-### 1. Resume Parsing Improvements
-Current parsing is PDF-only. I want DOCX support and better formatting retention.
+**Testing exposes things manual QA misses.** PostgreSQL schema permissions broke my API tests in a way that never surfaced during manual use. Debugging it properly forced me to treat the test environment as a first-class concern — not an afterthought.
 
 ---
 
-### 2. Fine-Tuned Resume Matching
-TF-IDF works well for MVPs, but embeddings could improve semantic understanding.
+## Roadmap
+
+- [ ] DOCX resume support (currently PDF only)
+- [ ] Semantic matching with sentence embeddings (upgrade from TF-IDF)
+- [ ] Multi-user auth — makes this viable as a SaaS product
+- [ ] Browser extension for one-click JD capture
+- [ ] Export prep plan to PDF
 
 ---
 
-### 3. Authentication + User Accounts
-Currently single-user only. Multi-user support would make this usable as a SaaS product.
+## License
 
----
-
-# License
-
-MIT License
+MIT
